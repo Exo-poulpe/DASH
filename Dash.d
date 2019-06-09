@@ -11,7 +11,8 @@ import std.conv;
 immutable string POSITIVE = "[+]";
 immutable string NEGATIVE = "[-]";
 immutable string SPECIAL = "[*]";
-immutable string VERSION = "0.1.0.1";
+immutable string VERSION = "0.1.0.2";
+immutable string SEPARATROR = "==============================";
 immutable int BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
 immutable int MB = 1_000_000;
@@ -22,6 +23,7 @@ immutable double K = 1_000;
 string Target = null, Wordlist = null;
 bool Verbose = false, Counter = false, Benchmark = false;
 int Mode = -1;
+uint COUNT = 0;
 
 string HelpMode = "Mode to use for hash function\n\t0 | md5\n\t1 | sha1\n\t2 | sha256\n\t3 | sha512";
 
@@ -51,6 +53,11 @@ int main(string[] args)
         {
             string start = format!"Start : %s"(Clock.currTime());
             Hasher();
+            if (Verbose || Counter)
+            {
+                writefln("Password tested : %u",COUNT);
+            }
+            writeln(start);
             writefln("Stop : %s", Clock.currTime());
         }
         catch (Exception ex)
@@ -70,12 +77,37 @@ int main(string[] args)
 
 }
 
+void HashInfo()
+{
+    writefln("Wordlist to use   : %s",Wordlist);
+    writefln("Hash to find      : %s",Target);
+     switch (Mode)
+    {
+        case 0:
+            writeln("Mode of hash\t  : MD5");
+            break;
+        case 1:
+            writeln("Mode of hash\t  : SHA1");
+            break;
+        case 2:
+            writeln("Mode of hash\t  : SHA256");
+            break;
+        case 3:
+            writeln("Mode of hash\t  : SHA512");
+            break;
+        default:
+            writeln("Mode of hash\t  : MD5");
+            break;
+    }
+    writefln("%s",SEPARATROR);
+}
+
 void Hasher()
 {
+    HashInfo();
     switch (Mode)
     {
     case 0:
-        writeln("Mode : MD5");
         string tmp = HashTesting(Target, Wordlist, new MD5Digest());
         if (tmp != "")
         {
@@ -88,7 +120,6 @@ void Hasher()
         break;
 
     case 1:
-        writeln("Mode : SHA1");
         string tmp = HashTesting(Target, Wordlist, new SHA1Digest());
         if (tmp != "")
         {
@@ -100,7 +131,6 @@ void Hasher()
         }
         break;
     case 2:
-        writeln("Mode : SHA256");
         string tmp = HashTesting(Target, Wordlist, new SHA256Digest());
         if (tmp != "")
         {
@@ -112,7 +142,6 @@ void Hasher()
         }
         break;
     case 3:
-        writeln("Mode : SHA512");
         string tmp = HashTesting(Target, Wordlist, new SHA512Digest());
         if (tmp != "")
         {
@@ -132,14 +161,13 @@ void Hasher()
 
 string HashTesting(string hash, string wordlist, Digest mode)
 {
-    uint count = 0;
     string password = "";
     string hashResult = "";
     File f = File(wordlist, "r+");
     while (hashResult != hash || (f.readln()) != null)
     {
         password = chomp(f.readln());
-        count++;
+        COUNT++;
         hashResult = toLower(toHexString(mode.digest(password)));
         if (Verbose)
         {
@@ -147,10 +175,6 @@ string HashTesting(string hash, string wordlist, Digest mode)
         }
         if (hashResult == hash)
         {
-            if (Verbose || Counter)
-            {
-                writefln("Password count : %u", count);
-            }
             return password;
         }
     }
@@ -184,6 +208,7 @@ void Benchmarking()
     }
 
     writeln("Password count : ",BENCHMARK_VALUE);
+    writefln("%s",SEPARATROR);
     writefln("Start : %s", Clock.currTime());
     StopWatch sw = StopWatch();
     sw.start();
@@ -221,15 +246,15 @@ string ToNormalize(double tot)
     string result = null;
     if (tot > KB && tot < MB)
     {
-        result = format!"%.2f KH/s"(tot / KB);
+        result = format!"~%.2f KH/s"(tot / KB);
     } 
     else if (tot > MB && tot < GB)
     {
-        result = format!"%.2f MH/s"(tot / MB);
+        result = format!"~%.2f MH/s"(tot / MB);
 
     } else if (tot > GB && tot < TB)
     {
-        result = format!"%.2f GH/s"(tot / GB);
+        result = format!"~%.2f GH/s"(tot / GB);
     }
 
     return result;
