@@ -21,7 +21,7 @@ immutable long TB = 1_000_000_000_000;
 immutable double K = 1_000;
 
 string Target = null, Wordlist = null;
-bool Verbose = false, Counter = false, Benchmark = false;
+bool Verbose = false, Counter = false, Benchmark = false, Hash = false;
 int Mode = -1;
 uint COUNT = 0;
 
@@ -32,14 +32,44 @@ int main(string[] args)
     auto parser = getopt(args, "target|t", "Target value to find", &Target,
             "mode|m", HelpMode, &Mode, "benchmark", "Benchmark mode",
             &Benchmark, "count", "Print count password only", &Counter, "wordlist|w",
-            "Wordlist to use for password testing", &Wordlist, "verbose|v",
-            "More verbose output", &Verbose);
+            "Wordlist to use for password testing", &Wordlist, "hash",
+            "Hash text with seleted mode. Use target (-t) options for text to hash",
+            &Hash, "verbose|v", "More verbose output", &Verbose);
 
     if (parser.helpWanted)
     {
         writefln("\nProgram write by Exo-poulpe %s", VERSION);
         defaultGetoptPrinter("This program break hash from D language.", parser.options);
         writeln("\nExemple : dash -m 0 -t <hash> -w rockyou.txt");
+    }
+    else if (Hash)
+    {
+        Digest HASH = null;
+        switch (Mode)
+        {
+        case 0:
+            writeln("Mode of hash\t  : MD5");
+            HASH = new MD5Digest();
+            break;
+        case 1:
+        writeln("Mode of hash\t  : SHA1");
+            HASH = new SHA1Digest();
+            break;
+        case 2:
+        writeln("Mode of hash\t  : SHA256");
+            HASH = new SHA256Digest();
+            break;
+        case 3:
+        writeln("Mode of hash\t  : SHA512");
+            HASH = new SHA512Digest();
+            break;
+        default:
+        writeln("Mode of hash\t  : MD5");
+            HASH = new MD5Digest();
+            break;
+        }
+
+        writefln("%s : %s", Target, toLower(toHexString(HASH.digest(Target))));
     }
     else if (Benchmark)
     {
@@ -55,7 +85,7 @@ int main(string[] args)
             Hasher();
             if (Verbose || Counter)
             {
-                writefln("Password tested : %u",COUNT);
+                writefln("Password tested : %u", COUNT);
             }
             writeln(start);
             writefln("Stop : %s", Clock.currTime());
@@ -74,32 +104,31 @@ int main(string[] args)
     }
 
     return 0;
-
 }
 
 void HashInfo()
 {
-    writefln("Wordlist to use   : %s",Wordlist);
-    writefln("Hash to find      : %s",Target);
-     switch (Mode)
+    writefln("Wordlist to use   : %s", Wordlist);
+    writefln("Hash to find      : %s", Target);
+    switch (Mode)
     {
-        case 0:
-            writeln("Mode of hash\t  : MD5");
-            break;
-        case 1:
-            writeln("Mode of hash\t  : SHA1");
-            break;
-        case 2:
-            writeln("Mode of hash\t  : SHA256");
-            break;
-        case 3:
-            writeln("Mode of hash\t  : SHA512");
-            break;
-        default:
-            writeln("Mode of hash\t  : MD5");
-            break;
+    case 0:
+        writeln("Mode of hash\t  : MD5");
+        break;
+    case 1:
+        writeln("Mode of hash\t  : SHA1");
+        break;
+    case 2:
+        writeln("Mode of hash\t  : SHA256");
+        break;
+    case 3:
+        writeln("Mode of hash\t  : SHA512");
+        break;
+    default:
+        writeln("Mode of hash\t  : MD5");
+        break;
     }
-    writefln("%s",SEPARATROR);
+    writefln("%s", SEPARATROR);
 }
 
 void Hasher()
@@ -118,7 +147,6 @@ void Hasher()
             writefln("%sPassword not found", NEGATIVE);
         }
         break;
-
     case 1:
         string tmp = HashTesting(Target, Wordlist, new SHA1Digest());
         if (tmp != "")
@@ -152,7 +180,6 @@ void Hasher()
             writefln("%sPassword not found", NEGATIVE);
         }
         break;
-
     default:
         writeln("Mode unknow");
         break;
@@ -163,7 +190,7 @@ string HashTesting(string hash, string wordlist, Digest mode)
 {
     string password = "";
     string hashResult = "";
-    File f = File(wordlist, "r+");
+    File f = File(wordlist, "r");
     while (hashResult != hash || (f.readln()) != null)
     {
         password = chomp(f.readln());
@@ -190,25 +217,25 @@ void Benchmarking()
 
     switch (Mode)
     {
-        case 0:
-            writeln("MD5");
-            break;
-        case 1:
-            writeln("SHA1");
-            break;
-        case 2:
-            writeln("SHA256");
-            break;
-        case 3:
-            writeln("SHA512");
-            break;
-        default:
-            writeln("MD5");
-            break;
+    case 0:
+        writeln("MD5");
+        break;
+    case 1:
+        writeln("SHA1");
+        break;
+    case 2:
+        writeln("SHA256");
+        break;
+    case 3:
+        writeln("SHA512");
+        break;
+    default:
+        writeln("MD5");
+        break;
     }
 
-    writeln("Password count : ",BENCHMARK_VALUE);
-    writefln("%s",SEPARATROR);
+    writeln("Password count : ", BENCHMARK_VALUE);
+    writefln("%s", SEPARATROR);
     writefln("Start : %s", Clock.currTime());
     StopWatch sw = StopWatch();
     sw.start();
@@ -238,7 +265,7 @@ void Benchmarking()
     sw.stop();
     writefln("Stop : %s", Clock.currTime());
     double tot = BENCHMARK_VALUE / ((sw.peek.total!"msecs") / K);
-    writefln("Password per seconds : %s",ToNormalize(tot));
+    writefln("Password per seconds : %s", ToNormalize(tot));
 }
 
 string ToNormalize(double tot)
@@ -247,12 +274,13 @@ string ToNormalize(double tot)
     if (tot > KB && tot < MB)
     {
         result = format!"~%.2f KH/s"(tot / KB);
-    } 
+    }
     else if (tot > MB && tot < GB)
     {
         result = format!"~%.2f MH/s"(tot / MB);
 
-    } else if (tot > GB && tot < TB)
+    }
+    else if (tot > GB && tot < TB)
     {
         result = format!"~%.2f GH/s"(tot / GB);
     }
