@@ -8,12 +8,12 @@ import std.datetime.systime;
 import std.datetime.stopwatch;
 import std.conv;
 
-immutable string POSITIVE = "[+]";
-immutable string NEGATIVE = "[-]";
-immutable string SPECIAL = "[*]";
-immutable string VERSION = "0.1.0.2";
+immutable string POSITIVE = "\033[32m[+]\033[39m";
+immutable string NEGATIVE = "\033[31m[-]\033[39m";
+immutable string SPECIAL = "\033[34m[*]\033[39m";
+immutable string VERSION = "0.1.0.3";
 immutable string SEPARATROR = "==============================";
-immutable int BENCHMARK_VALUE = 10_000_000;
+immutable uint BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
 immutable int MB = 1_000_000;
 immutable int GB = 1_000_000_000;
@@ -42,7 +42,7 @@ int main(string[] args)
         defaultGetoptPrinter("This program break hash from D language.", parser.options);
         writeln("\nExemple : dash -m 0 -t <hash> -w rockyou.txt");
     }
-    else if (Hash)
+    else if (Hash && Target != null)
     {
         Digest HASH = null;
         switch (Mode)
@@ -85,7 +85,7 @@ int main(string[] args)
             Hasher();
             if (Verbose || Counter)
             {
-                writefln("Password tested : %u", COUNT);
+                writefln("%s Password tested : %u",SPECIAL, COUNT);
             }
             writeln(start);
             writefln("Stop : %s", Clock.currTime());
@@ -110,97 +110,82 @@ void HashInfo()
 {
     writefln("Wordlist to use   : %s", Wordlist);
     writefln("Hash to find      : %s", Target);
+    string tmp = null;
     switch (Mode)
     {
     case 0:
-        writeln("Mode of hash\t  : MD5");
+        tmp = "MD5";
         break;
     case 1:
-        writeln("Mode of hash\t  : SHA1");
+        tmp = "SHA1";
         break;
     case 2:
-        writeln("Mode of hash\t  : SHA256");
+        tmp= "SHA256";
         break;
     case 3:
-        writeln("Mode of hash\t  : SHA512");
+        tmp = "SHA512";
         break;
     default:
-        writeln("Mode of hash\t  : MD5");
+        tmp = "MD5";
         break;
     }
+    writefln("Mode of hash\t  : %s",tmp);
     writefln("%s", SEPARATROR);
 }
 
 void Hasher()
 {
     HashInfo();
+    string tmp = null;
     switch (Mode)
     {
     case 0:
-        string tmp = HashTesting(Target, Wordlist, new MD5Digest());
-        if (tmp != "")
-        {
-            writefln("%sPassword found \n%s:%s", POSITIVE, Target, tmp);
-        }
-        else
-        {
-            writefln("%sPassword not found", NEGATIVE);
-        }
+        tmp = HashTesting(Target, Wordlist, new MD5Digest());
         break;
     case 1:
-        string tmp = HashTesting(Target, Wordlist, new SHA1Digest());
-        if (tmp != "")
-        {
-            writefln("%sPassword found \n%s:%s", POSITIVE, Target, tmp);
-        }
-        else
-        {
-            writefln("%sPassword not found", NEGATIVE);
-        }
+        tmp = HashTesting(Target, Wordlist, new SHA1Digest());
         break;
     case 2:
-        string tmp = HashTesting(Target, Wordlist, new SHA256Digest());
-        if (tmp != "")
-        {
-            writefln("%sPassword found \n%s:%s", POSITIVE, Target, tmp);
-        }
-        else
-        {
-            writefln("%sPassword not found", NEGATIVE);
-        }
+        tmp = HashTesting(Target, Wordlist, new SHA256Digest());
         break;
     case 3:
-        string tmp = HashTesting(Target, Wordlist, new SHA512Digest());
-        if (tmp != "")
-        {
-            writefln("%sPassword found \n%s:%s", POSITIVE, Target, tmp);
-        }
-        else
-        {
-            writefln("%sPassword not found", NEGATIVE);
-        }
+        tmp = HashTesting(Target, Wordlist, new SHA512Digest());
         break;
     default:
         writeln("Mode unknow");
         break;
     }
+
+     if (tmp != "")
+        {
+            writefln("%s Password found",POSITIVE);
+            writefln("%s : %s", Target, tmp);
+        }
+        else
+        {
+            writefln("%s Password not found",NEGATIVE);
+        }
 }
 
 string HashTesting(string hash, string wordlist, Digest mode)
 {
     string password = "";
     string hashResult = "";
-    File f = File(wordlist, "r");
-    while (hashResult != hash || (f.readln()) != null)
+    File f = File(wordlist);
+    while (true)
     {
+        if (f.eof)
+        {
+            break;
+        }
         password = chomp(f.readln());
         COUNT++;
         hashResult = toLower(toHexString(mode.digest(password)));
         if (Verbose)
         {
-            writefln("Password test : %s :: %s", password, hashResult);
+            writefln("Password tested : %s :: %s", password, hashResult);
         }
-        if (hashResult == hash)
+        if(hashResult == hash)
         {
             return password;
         }
@@ -242,6 +227,7 @@ void Benchmarking()
 
     for (int i = 0; i < BENCHMARK_VALUE; i++)
     {
+        
         switch (Mode)
         {
         case 0:
@@ -257,7 +243,7 @@ void Benchmarking()
             string tmp = toHexString(new SHA512Digest().digest(text(i)));
             break;
         default:
-            string tmp = HashTesting(Target, Wordlist, new MD5Digest());
+            string tmp = toHexString(new MD5Digest().digest(text(i)));
             break;
 
         }
@@ -265,7 +251,15 @@ void Benchmarking()
     sw.stop();
     writefln("Stop : %s", Clock.currTime());
     double tot = BENCHMARK_VALUE / ((sw.peek.total!"msecs") / K);
-    writefln("Password per seconds : %s", ToNormalize(tot));
+    writefln("%s Password per seconds : %s", SPECIAL ,ToNormalize(tot));
+    if (Verbose)
+    {
+        writeln(SEPARATROR);
+        writefln("Time in milliseconds      :  %s",(sw.peek.total!"msecs"));
+        writefln("Number of hash generated  :  %u",BENCHMARK_VALUE);
+        writefln("Complexity of hash        :  %d",Mode);
+        writeln("0 = easy\n1 = medium\n.etc..");
+    }
 }
 
 string ToNormalize(double tot)
@@ -286,4 +280,43 @@ string ToNormalize(double tot)
     }
 
     return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////COLOR/////////////////////////////
+
+class COLOR
+{
+    class ForeGround
+    {
+
+        static string DEFAULT = "\033[39m";
+        static string BLACK = "\033[30m";
+        static string RED = "\033[31m";
+        static string GREEN = "\033[32m";
+        static string BLUE = "\033[34m";
+        static string WHITE = "\033[97m";
+
+    }
+
+    class BackGround
+    {
+        static string DEFAULT = "\033[49m";
+        static string BLACK = "\033[40m";
+        static string RED = "\033[41m";
+        static string GREEN = "\033[42m";
+        static string BLUE = "\033[44m";
+        static string WHITE = "\033[107m";
+    }
+
 }
