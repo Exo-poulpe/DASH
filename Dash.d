@@ -7,11 +7,14 @@ import std.string;
 import std.datetime.systime;
 import std.datetime.stopwatch;
 import std.conv;
+import std.concurrency;
+import std.system;
+import core.cpuid;
 
 immutable string POSITIVE = "\033[32m[+]\033[39m";
 immutable string NEGATIVE = "\033[31m[-]\033[39m";
 immutable string SPECIAL = "\033[34m[*]\033[39m";
-immutable string VERSION = "0.1.0.3";
+immutable string VERSION = "0.1.0.4";
 immutable string SEPARATROR = "==============================";
 immutable uint BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
@@ -21,19 +24,21 @@ immutable long TB = 1_000_000_000_000;
 immutable double K = 1_000;
 
 string Target = null, Wordlist = null;
-bool Verbose = false, Counter = false, Benchmark = false, Hash = false;
+bool Verbose = false, Counter = false, Benchmark = false, Hash = false,Hardware = false;
 int Mode = -1;
 uint COUNT = 0;
 
 string HelpMode = "Mode to use for hash function\n\t0 | md5\n\t1 | sha1\n\t2 | sha256\n\t3 | sha512";
 
+
 int main(string[] args)
 {
     auto parser = getopt(args, "target|t", "Target value to find", &Target,
             "mode|m", HelpMode, &Mode, "benchmark", "Benchmark mode",
-            &Benchmark, "count", "Print count password only", &Counter, "wordlist|w",
-            "Wordlist to use for password testing", &Wordlist, "hash",
-            "Hash text with seleted mode. Use target (-t) options for text to hash",
+            &Benchmark, "count", "Print count password only", &Counter, 
+            "wordlist|w","Wordlist to use for password testing", &Wordlist, 
+            "hardware-info","Show hardware info", &Hardware, 
+            "hash","Hash text with seleted mode. Use target (-t) options for text to hash",
             &Hash, "verbose|v", "More verbose output", &Verbose);
 
     if (parser.helpWanted)
@@ -41,6 +46,12 @@ int main(string[] args)
         writefln("\nProgram write by Exo-poulpe %s", VERSION);
         defaultGetoptPrinter("This program break hash from D language.", parser.options);
         writeln("\nExemple : dash -m 0 -t <hash> -w rockyou.txt");
+        writeln("\nExemple : dash --hash -m 1 -t \"example\"");
+
+    } else if (Hardware)
+    {
+        writeln(HardWareInfo.ProcessorInfo());
+        writeln("OS version : ",HardWareInfo.OSInfo());
     }
     else if (Hash && Target != null)
     {
@@ -101,6 +112,7 @@ int main(string[] args)
         writefln("\nProgram write by Exo-poulpe %s", VERSION);
         defaultGetoptPrinter("This program break hash from D language.", parser.options);
         writeln("\nExemple : dash -m 0 -t <hash> -w rockyou.txt");
+        writeln("\nExemple : dash --hash -m 1 -t \"example\"");
     }
 
     return 0;
@@ -320,3 +332,28 @@ class COLOR
     }
 
 }
+
+//////////////////////HARDWARE/////////////////////////////
+
+class HardWareInfo {
+    
+    static string ProcessorInfo()
+    {
+        string vendor = vendor();
+        string proc = processor();
+        string cores = to!string(coresPerCPU());
+        string thread = to!string(threadsPerCPU());
+        string bit = (isX86_64() == true) ? "x86_x64" : "x86";
+        string hyper = (hyperThreading() == true) ? "yes" : "no";
+        string result = format!"Vendor \t : %s\nType \t : %s\nPhysical cores \t : %s\nLogical cores \t : %s\nProcessor bits \t : %s\nProcessor support HyperThreading \t : %s"(vendor, proc, cores, thread, bit, hyper);
+        return result;
+    }
+
+    static string OSInfo()
+    {
+        return format!"%s"(os);
+    }
+
+}
+
+
