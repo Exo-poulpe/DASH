@@ -1,20 +1,22 @@
 import std.digest.md;
 import std.digest.sha;
-import std.digest;
 import std.getopt;
+import std.digest;
 import std.stdio;
 import std.string;
 import std.datetime.systime;
 import std.datetime.stopwatch;
 import std.conv;
 import std.concurrency;
-import std.system;
-import core.cpuid;
+
+import Color;
+import HardInfo;
+import BruteForce;
 
 immutable string POSITIVE = "\033[32m[+]\033[39m";
 immutable string NEGATIVE = "\033[31m[-]\033[39m";
 immutable string SPECIAL = "\033[34m[*]\033[39m";
-immutable string VERSION = "0.1.0.4";
+immutable string VERSION = "0.1.0.5";
 immutable string SEPARATROR = "==============================";
 immutable uint BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
@@ -24,21 +26,22 @@ immutable long TB = 1_000_000_000_000;
 immutable double K = 1_000;
 
 string Target = null, Wordlist = null;
-bool Verbose = false, Counter = false, Benchmark = false, Hash = false,Hardware = false;
+bool Verbose = false, Counter = false, Benchmark = false, Hash = false,
+    Hardware = false, Brute = false;
 int Mode = -1;
 uint COUNT = 0;
 
 string HelpMode = "Mode to use for hash function\n\t0 | md5\n\t1 | sha1\n\t2 | sha256\n\t3 | sha512";
 
-
 int main(string[] args)
 {
     auto parser = getopt(args, "target|t", "Target value to find", &Target,
             "mode|m", HelpMode, &Mode, "benchmark", "Benchmark mode",
-            &Benchmark, "count", "Print count password only", &Counter, 
-            "wordlist|w","Wordlist to use for password testing", &Wordlist, 
-            "hardware-info","Show hardware info", &Hardware, 
-            "hash","Hash text with seleted mode. Use target (-t) options for text to hash",
+            &Benchmark, "count", "Print count password only", &Counter,
+            "wordlist|w", "Wordlist to use for password testing",
+            &Wordlist, "hardware-info", "Show hardware info", &Hardware,
+            "brute", "Use brute force methods (slow)", &Brute, "hash",
+            "Hash text with seleted mode. Use target (-t) options for text to hash",
             &Hash, "verbose|v", "More verbose output", &Verbose);
 
     if (parser.helpWanted)
@@ -48,12 +51,13 @@ int main(string[] args)
         writeln("\nExemple : dash -m 0 -t <hash> -w rockyou.txt");
         writeln("\nExemple : dash --hash -m 1 -t \"example\"");
 
-    } else if (Hardware)
+    }
+    else if (Hardware)
     {
         writeln(HardWareInfo.ProcessorInfo());
-        writeln("OS version : ",HardWareInfo.OSInfo());
+        writeln("OS version : ", HardWareInfo.OSInfo());
     }
-    else if (Hash && Target != null)
+    else if (Hash && Target != null && !Brute)
     {
         Digest HASH = null;
         switch (Mode)
@@ -63,24 +67,68 @@ int main(string[] args)
             HASH = new MD5Digest();
             break;
         case 1:
-        writeln("Mode of hash\t  : SHA1");
+            writeln("Mode of hash\t  : SHA1");
             HASH = new SHA1Digest();
             break;
         case 2:
-        writeln("Mode of hash\t  : SHA256");
+            writeln("Mode of hash\t  : SHA256");
             HASH = new SHA256Digest();
             break;
         case 3:
-        writeln("Mode of hash\t  : SHA512");
+            writeln("Mode of hash\t  : SHA512");
             HASH = new SHA512Digest();
             break;
         default:
-        writeln("Mode of hash\t  : MD5");
+            writeln("Mode of hash\t  : MD5");
             HASH = new MD5Digest();
             break;
         }
 
         writefln("%s : %s", Target, toLower(toHexString(HASH.digest(Target))));
+    }
+    else if (Target != null && Brute && Wordlist == null)
+    {
+        Digest HASH = null;
+        switch (Mode)
+        {
+        case 0:
+            writeln("Mode of hash\t  : MD5");
+            HASH = new MD5Digest();
+            break;
+        case 1:
+            writeln("Mode of hash\t  : SHA1");
+            HASH = new SHA1Digest();
+            break;
+        case 2:
+            writeln("Mode of hash\t  : SHA256");
+            HASH = new SHA256Digest();
+            break;
+        case 3:
+            writeln("Mode of hash\t  : SHA512");
+            HASH = new SHA512Digest();
+            break;
+        default:
+            writeln("Mode of hash\t  : MD5");
+            HASH = new MD5Digest();
+            break;
+        }
+        writeln("Start bruteforcing");
+        writeln(SEPARATROR);
+        string result = BruteForcing(Target, HASH, BruteForce.ALPHABET_UPPER_NUMBER);
+
+        if (result != "")
+        {
+            writefln("%s Password found", POSITIVE);
+            writefln("%s : %s", Target, result);
+        }
+        else
+        {
+            writefln("%s Password not found", NEGATIVE);
+        }
+        if (Counter)
+        {
+            writefln("%s Password tested %.0f",SPECIAL,BruteForce.countPassword);
+        }
     }
     else if (Benchmark)
     {
@@ -96,7 +144,7 @@ int main(string[] args)
             Hasher();
             if (Verbose || Counter)
             {
-                writefln("%s Password tested : %u",SPECIAL, COUNT);
+                writefln("%s Password tested : %u", SPECIAL, COUNT);
             }
             writeln(start);
             writefln("Stop : %s", Clock.currTime());
@@ -132,7 +180,7 @@ void HashInfo()
         tmp = "SHA1";
         break;
     case 2:
-        tmp= "SHA256";
+        tmp = "SHA256";
         break;
     case 3:
         tmp = "SHA512";
@@ -141,7 +189,7 @@ void HashInfo()
         tmp = "MD5";
         break;
     }
-    writefln("Mode of hash\t  : %s",tmp);
+    writefln("Mode of hash\t  : %s", tmp);
     writefln("%s", SEPARATROR);
 }
 
@@ -168,15 +216,15 @@ void Hasher()
         break;
     }
 
-     if (tmp != "")
-        {
-            writefln("%s Password found",POSITIVE);
-            writefln("%s : %s", Target, tmp);
-        }
-        else
-        {
-            writefln("%s Password not found",NEGATIVE);
-        }
+    if (tmp != "")
+    {
+        writefln("%s Password found", POSITIVE);
+        writefln("%s : %s", Target, tmp);
+    }
+    else
+    {
+        writefln("%s Password not found", NEGATIVE);
+    }
 }
 
 string HashTesting(string hash, string wordlist, Digest mode)
@@ -197,7 +245,7 @@ string HashTesting(string hash, string wordlist, Digest mode)
         {
             writefln("Password tested : %s :: %s", password, hashResult);
         }
-        if(hashResult == hash)
+        if (hashResult == hash)
         {
             return password;
         }
@@ -239,7 +287,7 @@ void Benchmarking()
 
     for (int i = 0; i < BENCHMARK_VALUE; i++)
     {
-        
+
         switch (Mode)
         {
         case 0:
@@ -263,13 +311,13 @@ void Benchmarking()
     sw.stop();
     writefln("Stop : %s", Clock.currTime());
     double tot = BENCHMARK_VALUE / ((sw.peek.total!"msecs") / K);
-    writefln("%s Password per seconds : %s", SPECIAL ,ToNormalize(tot));
+    writefln("%s Password per seconds : %s", SPECIAL, ToNormalize(tot));
     if (Verbose)
     {
         writeln(SEPARATROR);
-        writefln("Time in milliseconds      :  %s",(sw.peek.total!"msecs"));
-        writefln("Number of hash generated  :  %u",BENCHMARK_VALUE);
-        writefln("Complexity of hash        :  %d",Mode);
+        writefln("Time in milliseconds      :  %s", (sw.peek.total!"msecs"));
+        writefln("Number of hash generated  :  %u", BENCHMARK_VALUE);
+        writefln("Complexity of hash        :  %d", Mode);
         writeln("0 = easy\n1 = medium\n.etc..");
     }
 }
@@ -293,67 +341,3 @@ string ToNormalize(double tot)
 
     return result;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-//////////////////////COLOR/////////////////////////////
-
-class COLOR
-{
-    class ForeGround
-    {
-
-        static string DEFAULT = "\033[39m";
-        static string BLACK = "\033[30m";
-        static string RED = "\033[31m";
-        static string GREEN = "\033[32m";
-        static string BLUE = "\033[34m";
-        static string WHITE = "\033[97m";
-
-    }
-
-    class BackGround
-    {
-        static string DEFAULT = "\033[49m";
-        static string BLACK = "\033[40m";
-        static string RED = "\033[41m";
-        static string GREEN = "\033[42m";
-        static string BLUE = "\033[44m";
-        static string WHITE = "\033[107m";
-    }
-
-}
-
-//////////////////////HARDWARE/////////////////////////////
-
-class HardWareInfo {
-    
-    static string ProcessorInfo()
-    {
-        string vendor = vendor();
-        string proc = processor();
-        string cores = to!string(coresPerCPU());
-        string thread = to!string(threadsPerCPU());
-        string bit = (isX86_64() == true) ? "x86_x64" : "x86";
-        string hyper = (hyperThreading() == true) ? "yes" : "no";
-        string result = format!"Vendor \t : %s\nType \t : %s\nPhysical cores \t : %s\nLogical cores \t : %s\nProcessor bits \t : %s\nProcessor support HyperThreading \t : %s"(vendor, proc, cores, thread, bit, hyper);
-        return result;
-    }
-
-    static string OSInfo()
-    {
-        return format!"%s"(os);
-    }
-
-}
-
-
