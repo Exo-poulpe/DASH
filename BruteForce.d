@@ -26,13 +26,13 @@ public string BruteForcing(string hash, Digest mode, char[] alpa = ALPHABET_UPPE
     {
         for (int i = 0; i < Alphabet.length; i++)
         {
-            tmp = CheckPassWordLetter(tmp);
+            countPassword++;
             if (toLower(toHexString(mode.digest(tmp))) == hash)
             {
                 writefln("Stop : %s", Clock.currTime());
                 return format!"%s"(tmp);
             }
-            countPassword++;
+            tmp = CheckPassWordLetter(tmp);
 
         }
 

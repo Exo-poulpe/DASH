@@ -16,7 +16,7 @@ import BruteForce;
 immutable string POSITIVE = "\033[32m[+]\033[39m";
 immutable string NEGATIVE = "\033[31m[-]\033[39m";
 immutable string SPECIAL = "\033[34m[*]\033[39m";
-immutable string VERSION = "0.1.0.5";
+immutable string VERSION = "0.1.0.6";
 immutable string SEPARATROR = "==============================";
 immutable uint BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
