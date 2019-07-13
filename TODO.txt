@@ -1,0 +1,3 @@
+ - Faire un benchmark en mode brute force
+ - Faire le mode verbeux en mode brute force (Fait)
+ - Choisir les types d'alphabet pour le brute force (Fait)

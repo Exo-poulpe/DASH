@@ -16,7 +16,7 @@ import BruteForce;
 immutable string POSITIVE = "\033[32m[+]\033[39m";
 immutable string NEGATIVE = "\033[31m[-]\033[39m";
 immutable string SPECIAL = "\033[34m[*]\033[39m";
-immutable string VERSION = "0.1.0.6";
+immutable string VERSION = "0.1.0.8";
 immutable string SEPARATROR = "==============================";
 immutable uint BENCHMARK_VALUE = 10_000_000;
 immutable int KB = 1_000;
@@ -28,10 +28,11 @@ immutable double K = 1_000;
 string Target = null, Wordlist = null;
 bool Verbose = false, Counter = false, Benchmark = false, Hash = false,
     Hardware = false, Brute = false;
-int Mode = -1;
+int Mode = -1, AlphabetChoice = 3;
 uint COUNT = 0;
 
 string HelpMode = "Mode to use for hash function\n\t0 | md5\n\t1 | sha1\n\t2 | sha256\n\t3 | sha512";
+string HelpAlphabet = format!"Define alphabet mode\n\t1 | %s\n\t2 | %s\n\t3 | %s (Default)"(BruteForce.ALPHABET,BruteForce.ALPHABET_UPPER,BruteForce.ALPHABET_UPPER_NUMBER);
 
 int main(string[] args)
 {
@@ -42,7 +43,7 @@ int main(string[] args)
             &Wordlist, "hardware-info", "Show hardware info", &Hardware,
             "brute", "Use brute force methods (slow)", &Brute, "hash",
             "Hash text with seleted mode. Use target (-t) options for text to hash",
-            &Hash, "verbose|v", "More verbose output", &Verbose);
+            &Hash, "alphabet", HelpAlphabet , &AlphabetChoice,"verbose|v", "More verbose output", &Verbose);
 
     if (parser.helpWanted)
     {
@@ -112,9 +113,13 @@ int main(string[] args)
             HASH = new MD5Digest();
             break;
         }
+        char[] tmp = (AlphabetChoice == 3) ? BruteForce.ALPHABET_UPPER_NUMBER.dup : 
+            (AlphabetChoice == 2) ? BruteForce.ALPHABET_UPPER.dup : 
+            (AlphabetChoice == 1) ? BruteForce.ALPHABET.dup : BruteForce.ALPHABET_UPPER_NUMBER.dup;
+        writefln("Alphabet choose : %s",tmp);
         writeln("Start bruteforcing");
         writeln(SEPARATROR);
-        string result = BruteForcing(Target, HASH, BruteForce.ALPHABET_UPPER_NUMBER);
+        string result = BruteForcing(Target, HASH, tmp,Verbose);
 
         if (result != "")
         {
@@ -127,7 +132,7 @@ int main(string[] args)
         }
         if (Counter)
         {
-            writefln("%s Password tested %.0f",SPECIAL,BruteForce.countPassword);
+            writefln("%s Password tested %.0f", SPECIAL, BruteForce.countPassword);
         }
     }
     else if (Benchmark)

@@ -8,15 +8,15 @@ import std.conv;
 import std.datetime.systime;
 import std.datetime.stopwatch;
 
-static char[] ALPHABET = "abcdefghijklmnopqrstuvwxyz".dup;
-static char[] ALPHABET_UPPER = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".dup;
-static char[] ALPHABET_UPPER_NUMBER = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".dup;
+immutable char[] ALPHABET = "abcdefghijklmnopqrstuvwxyz".dup;
+immutable char[] ALPHABET_UPPER = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".dup;
+immutable char[] ALPHABET_UPPER_NUMBER = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".dup;
 
 public double countPassword = 0;
 
 public char[] Alphabet = null;
 
-public string BruteForcing(string hash, Digest mode, char[] alpa = ALPHABET_UPPER_NUMBER)
+public string BruteForcing(string hash, Digest mode, char[] alpa,bool verbose = false)
 {
     Alphabet = alpa;
     char[] tmp = [Alphabet[0]];
@@ -27,6 +27,10 @@ public string BruteForcing(string hash, Digest mode, char[] alpa = ALPHABET_UPPE
         for (int i = 0; i < Alphabet.length; i++)
         {
             countPassword++;
+            if (verbose == true)
+            {
+                writefln("Password tested : %s :: %s", tmp, toLower(toHexString(mode.digest(tmp))));
+            }
             if (toLower(toHexString(mode.digest(tmp))) == hash)
             {
                 writefln("Stop : %s", Clock.currTime());
